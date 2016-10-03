@@ -1,11 +1,13 @@
 package com.altoros.blockchain.reinsurance;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
  * @author Nikita Gorbachevski
  */
 public class Claim {
+
     private String cedant;
     private String lineOfBusiness;
     private String territory;
@@ -16,9 +18,9 @@ public class Claim {
     private LocalDate policyInceptionDate;
     private LocalDate lossDate;
     private LocalDate reportDate;
-    private long paid;
-    private long reserved;
-    private long incurred;
+    private BigDecimal paid;
+    private BigDecimal reserved;
+    private BigDecimal incurred;
     private String currency;
     private String status;
 
@@ -102,27 +104,27 @@ public class Claim {
         this.reportDate = reportDate;
     }
 
-    public long getPaid() {
+    public BigDecimal getPaid() {
         return paid;
     }
 
-    public void setPaid(long paid) {
+    public void setPaid(BigDecimal paid) {
         this.paid = paid;
     }
 
-    public long getReserved() {
+    public BigDecimal getReserved() {
         return reserved;
     }
 
-    public void setReserved(long reserved) {
+    public void setReserved(BigDecimal reserved) {
         this.reserved = reserved;
     }
 
-    public long getIncurred() {
+    public BigDecimal getIncurred() {
         return incurred;
     }
 
-    public void setIncurred(long incurred) {
+    public void setIncurred(BigDecimal incurred) {
         this.incurred = incurred;
     }
 
