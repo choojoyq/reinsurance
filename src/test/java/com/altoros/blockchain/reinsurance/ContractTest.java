@@ -18,38 +18,70 @@ import java.util.List;
 @RunWith(MockitoJUnitRunner.class)
 public class ContractTest {
 
-    private Contract contract;
+    private Contract contractEnergyOnshore;
+    private Contract contractAviation;
     private List<Claim> claims = new ArrayList<>();
 
     @Before
     public void setUp() {
-        this.contract = new Contract();
-        contract.setCedant("ACGS");
-        contract.setReinsurer("ART");
-        contract.setShare(1);
-        contract.setInceptionDate(LocalDate.of(2015, 1, 1));
-        contract.setExpiryDate(LocalDate.of(2015, 12, 31));
-        contract.setBasis("LOD");
-        contract.setLineOfBusiness("Energy Onshore");
-        contract.setPeril("All");
-        contract.setTerritory("Worldwide");
-        contract.setCurrency("USD");
-        contract.setRiskFinancial(new Financial(new BigDecimal(30_000_000), new BigDecimal(20_000_000), "Ded"));
-        contract.setEventFinancial(new Financial(BigDecimal.ZERO, new BigDecimal(40_000_000), "Ded"));
-        contract.setPeriodFinancial(new Financial(BigDecimal.ZERO, new BigDecimal(60_000_000), "Ded"));
-        contract.setMinimum(8_400_000);
-        contract.setDeposit(8_400_000);
-        contract.setAdjustableRate(4.599);
-        contract.setSubjectPremiumFinal(182_643_997);
-        contract.setReinstatementPremium(2);
-        contract.setReinstatementPremiumPercentage(1);
-        contract.setAdditionalPremium(0);
-        contract.setProfitCommission(0);
-        contract.setNoClaimsBonus(0);
-        contract.setPaymentSchedules(Arrays.asList(
-                new PaymentSchedule(LocalDate.of(2015, 1, 1), 4_200_000),
-                new PaymentSchedule(LocalDate.of(2015, 6, 1), 4_200_000)));
-        contract.setStatus("APPROVED");
+        this.contractEnergyOnshore = new Contract();
+        contractEnergyOnshore.setCedant("ACGS");
+        contractEnergyOnshore.setReinsurer("ART");
+        contractEnergyOnshore.setShare(BigDecimal.ONE);
+        contractEnergyOnshore.setInceptionDate(LocalDate.of(2015, 1, 1));
+        contractEnergyOnshore.setExpiryDate(LocalDate.of(2015, 12, 31));
+        contractEnergyOnshore.setBasis("LOD");
+        contractEnergyOnshore.setLineOfBusiness("Energy Onshore");
+        contractEnergyOnshore.setPeril("All");
+        contractEnergyOnshore.setTerritory("Worldwide");
+        contractEnergyOnshore.setCurrency("USD");
+        contractEnergyOnshore.setRiskFinancial(new Financial(new BigDecimal(20_000_000), new BigDecimal(30_000_000), "Ded"));
+        contractEnergyOnshore.setEventFinancial(new Financial(new BigDecimal(40_000_000), BigDecimal.ZERO, "Ded"));
+        contractEnergyOnshore.setPeriodFinancial(new Financial(new BigDecimal(60_000_000), BigDecimal.ZERO, "Ded"));
+        contractEnergyOnshore.setMinimum(new BigDecimal(8_400_000));
+        contractEnergyOnshore.setDeposit(new BigDecimal(8_400_000));
+        contractEnergyOnshore.setAdjustableRate(BigDecimal.valueOf(0.04599));
+        contractEnergyOnshore.setSubjectPremiumFinal(new BigDecimal(182_643_997));
+        contractEnergyOnshore.setSubjectPremiumFinalAdjustedDate(LocalDate.of(2016, 1, 1));
+        contractEnergyOnshore.setReinstatementPremium(new BigDecimal(2));
+        contractEnergyOnshore.setReinstatementPremiumPercentage(BigDecimal.ONE);
+        contractEnergyOnshore.setAdditionalPremium(BigDecimal.ZERO);
+        contractEnergyOnshore.setProfitCommission(BigDecimal.ZERO);
+        contractEnergyOnshore.setNoClaimsBonus(BigDecimal.ZERO);
+        contractEnergyOnshore.setPaymentSchedules(Arrays.asList(
+                new PaymentSchedule(LocalDate.of(2015, 1, 1), new BigDecimal(4_200_000)),
+                new PaymentSchedule(LocalDate.of(2015, 6, 1), new BigDecimal(4_200_000))));
+        contractEnergyOnshore.setStatus("APPROVED");
+
+        contractAviation = new Contract();
+        contractAviation.setCedant("ACGS");
+        contractAviation.setReinsurer("ART");
+        contractAviation.setShare(BigDecimal.valueOf(0.75));
+        contractAviation.setInceptionDate(LocalDate.of(2015, 1, 1));
+        contractAviation.setExpiryDate(LocalDate.of(2015, 12, 31));
+        contractAviation.setBasis("RA");
+        contractAviation.setLineOfBusiness("Aviation");
+        contractAviation.setPeril("All");
+        contractAviation.setTerritory("Worldwide");
+        contractAviation.setCurrency("USD");
+        contractAviation.setRiskFinancial(new Financial(new BigDecimal(Long.MAX_VALUE), BigDecimal.ZERO, "Ded"));
+        contractAviation.setEventFinancial(new Financial(new BigDecimal(75_000_000), new BigDecimal(25_000_000), "Ded"));
+        contractAviation.setPeriodFinancial(new Financial(new BigDecimal(300_000_000), BigDecimal.ZERO, "Ded"));
+        contractAviation.setMinimum(new BigDecimal(15_375_000));
+        contractAviation.setDeposit(new BigDecimal(15_375_000));
+        contractAviation.setAdjustableRate(BigDecimal.valueOf(0.02727));
+        contractAviation.setSubjectPremiumFinal(new BigDecimal(563_804_995));
+        contractAviation.setSubjectPremiumFinalAdjustedDate(LocalDate.of(2016, 1, 1));
+        contractAviation.setReinstatementPremium(new BigDecimal(3));
+        contractAviation.setReinstatementPremiumPercentage(BigDecimal.valueOf(1.1));
+        contractAviation.setAdditionalPremium(BigDecimal.ZERO);
+        contractAviation.setProfitCommission(BigDecimal.ZERO);
+        contractAviation.setNoClaimsBonus(BigDecimal.ZERO);
+        contractAviation.setPaymentSchedules(Arrays.asList(
+                new PaymentSchedule(LocalDate.of(2015, 1, 1), new BigDecimal(7_687_500)),
+                new PaymentSchedule(LocalDate.of(2015, 6, 1), new BigDecimal(7_687_500))));
+        contractAviation.setStatus("APPROVED");
+
 
         Claim claim = new Claim();
         claim.setCedant("ACGS");
@@ -233,10 +265,82 @@ public class ContractTest {
     }
 
     @Test
-    public void testProcessEnergyOnshore() {
-        ClaimsAccounting claimsAccounting = this.contract.process(this.claims);
-        Assert.assertEquals(0, new BigDecimal(43_000_000).compareTo(claimsAccounting.getPaid()));
-        Assert.assertEquals(0, new BigDecimal(64_800_000).compareTo(claimsAccounting.getIncurred()));
-        Assert.assertEquals(this.claims.size(), claimsAccounting.getClaims().size());
+    public void testProcessClaimsAviation() {
+        ClaimsSummary claimsSummary = this.contractAviation.processClaims(this.claims);
+        Assert.assertEquals(0, new BigDecimal(115_000_000).compareTo(claimsSummary.getPaid()));
+        Assert.assertEquals(0, new BigDecimal(145_000_000).compareTo(claimsSummary.getIncurred()));
+        Assert.assertEquals(5, claimsSummary.getClaims().size());
+    }
+
+    @Test
+    public void testProcessClaimsEnergyOnshore() {
+        ClaimsSummary claimsSummary = this.contractEnergyOnshore.processClaims(this.claims);
+        Assert.assertEquals(0, new BigDecimal(43_000_000).compareTo(claimsSummary.getPaid()));
+        Assert.assertEquals(0, new BigDecimal(64_800_000).compareTo(claimsSummary.getIncurred()));
+        Assert.assertEquals(5, claimsSummary.getClaims().size());
+    }
+
+    @Test
+    public void testProcessPremiumsAviation() {
+        ClaimsSummary claimsSummary = new ClaimsSummary(
+                new BigDecimal(115_000_000), new BigDecimal(145_000_000), this.claims);
+        LocalDate evaluationDate = LocalDate.of(2015, 8, 30);
+        ContractSummary contractSummary = this.contractAviation.processPremiums(claimsSummary, evaluationDate);
+
+        Assert.assertEquals(0, new BigDecimal(115_000_000).compareTo(contractSummary.getPremiumsSummaryPaid().getTotalClaims()));
+        Assert.assertEquals(0, new BigDecimal(145_000_000).compareTo(contractSummary.getPremiumsSummaryIncurred().getTotalClaims()));
+
+        Assert.assertEquals(0, new BigDecimal(25_932_500).compareTo(contractSummary.getPremiumsSummaryPaid().getReinstatementPremium()));
+        Assert.assertEquals(0, new BigDecimal(32_697_500).compareTo(contractSummary.getPremiumsSummaryIncurred().getReinstatementPremium()));
+
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryPaid().getAdditionalPremium()));
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryIncurred().getAdditionalPremium()));
+
+        Assert.assertEquals(0, new BigDecimal(15_375_000).compareTo(contractSummary.getPremiumsSummaryPaid().getDepositPremium()));
+        Assert.assertEquals(0, new BigDecimal(15_375_000).compareTo(contractSummary.getPremiumsSummaryIncurred().getDepositPremium()));
+
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryPaid().getAdjustmentPremium()));
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryIncurred().getAdjustmentPremium()));
+
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryPaid().getProfitCommission()));
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryIncurred().getProfitCommission()));
+
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryPaid().getNoClaimsBonus()));
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryIncurred().getNoClaimsBonus()));
+
+        Assert.assertEquals(claimsSummary, contractSummary.getClaimsSummary());
+        Assert.assertEquals(evaluationDate, contractSummary.getEvaluationDate());
+    }
+
+    @Test
+    public void testProcessPremiumsEnergyOnshore() {
+        ClaimsSummary claimsSummary = new ClaimsSummary(
+                new BigDecimal(43_000_000), new BigDecimal(64_000_000), this.claims);
+        LocalDate evaluationDate = LocalDate.of(2015, 8, 30);
+        ContractSummary contractSummary = this.contractEnergyOnshore.processPremiums(claimsSummary, evaluationDate);
+
+        Assert.assertEquals(0, new BigDecimal(43_000_000).compareTo(contractSummary.getPremiumsSummaryPaid().getTotalClaims()));
+        Assert.assertEquals(0, new BigDecimal(60_000_000).compareTo(contractSummary.getPremiumsSummaryIncurred().getTotalClaims()));
+
+        Assert.assertEquals(0, new BigDecimal(16_800_000).compareTo(contractSummary.getPremiumsSummaryPaid().getReinstatementPremium()));
+        Assert.assertEquals(0, new BigDecimal(16_800_000).compareTo(contractSummary.getPremiumsSummaryIncurred().getReinstatementPremium()));
+
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryPaid().getAdditionalPremium()));
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryIncurred().getAdditionalPremium()));
+
+        Assert.assertEquals(0, new BigDecimal(8_400_000).compareTo(contractSummary.getPremiumsSummaryPaid().getDepositPremium()));
+        Assert.assertEquals(0, new BigDecimal(8_400_000).compareTo(contractSummary.getPremiumsSummaryIncurred().getDepositPremium()));
+
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryPaid().getAdjustmentPremium()));
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryIncurred().getAdjustmentPremium()));
+
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryPaid().getProfitCommission()));
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryIncurred().getProfitCommission()));
+
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryPaid().getNoClaimsBonus()));
+        Assert.assertEquals(0, BigDecimal.ZERO.compareTo(contractSummary.getPremiumsSummaryIncurred().getNoClaimsBonus()));
+
+        Assert.assertEquals(claimsSummary, contractSummary.getClaimsSummary());
+        Assert.assertEquals(evaluationDate, contractSummary.getEvaluationDate());
     }
 }

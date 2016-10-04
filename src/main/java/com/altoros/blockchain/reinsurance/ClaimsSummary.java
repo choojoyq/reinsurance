@@ -6,13 +6,13 @@ import java.util.List;
 /**
  * @author Nikita Gorbachevski
  */
-public class ClaimsAccounting {
+public class ClaimsSummary {
 
     private final BigDecimal paid;
     private final BigDecimal incurred;
     private final List<Claim> claims;
 
-    public ClaimsAccounting(BigDecimal paid, BigDecimal incurred, List<Claim> claims) {
+    public ClaimsSummary(BigDecimal paid, BigDecimal incurred, List<Claim> claims) {
         this.paid = paid;
         this.incurred = incurred;
         this.claims = claims;

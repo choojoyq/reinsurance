@@ -7,22 +7,22 @@ import java.math.BigDecimal;
  */
 public class Financial {
 
-    private final BigDecimal priority;
     private final BigDecimal limit;
+    private final BigDecimal priority;
     private final String priorityType;
 
-    public Financial(BigDecimal priority, BigDecimal limit, String priorityType) {
-        this.priority = priority;
+    public Financial(BigDecimal limit, BigDecimal priority, String priorityType) {
         this.limit = limit;
+        this.priority = priority;
         this.priorityType = priorityType;
-    }
-
-    public BigDecimal getPriority() {
-        return priority;
     }
 
     public BigDecimal getLimit() {
         return limit;
+    }
+
+    public BigDecimal getPriority() {
+        return priority;
     }
 
     public String getPriorityType() {
