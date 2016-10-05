@@ -7,24 +7,25 @@ import java.time.LocalDate;
  */
 public class ContractSummary {
 
-    private final PremiumsSummary premiumsSummaryPaid;
-    private final PremiumsSummary premiumsSummaryIncurred;
+    private final PremiumsSummary premiumsSummaryFull;
+    private final PremiumsSummary premiumsSummaryShared;
     private final ClaimsSummary claimsSummary;
     private final LocalDate evaluationDate;
 
-    public ContractSummary(PremiumsSummary premiumsSummaryPaid, PremiumsSummary premiumsSummaryIncurred, ClaimsSummary claimsSummary, LocalDate evaluationDate) {
-        this.premiumsSummaryPaid = premiumsSummaryPaid;
-        this.premiumsSummaryIncurred = premiumsSummaryIncurred;
+    public ContractSummary(PremiumsSummary premiumsSummaryFull, PremiumsSummary premiumsSummaryShared,
+                           ClaimsSummary claimsSummary, LocalDate evaluationDate) {
+        this.premiumsSummaryFull = premiumsSummaryFull;
+        this.premiumsSummaryShared = premiumsSummaryShared;
         this.claimsSummary = claimsSummary;
         this.evaluationDate = evaluationDate;
     }
 
-    public PremiumsSummary getPremiumsSummaryPaid() {
-        return premiumsSummaryPaid;
+    public PremiumsSummary getPremiumsSummaryFull() {
+        return premiumsSummaryFull;
     }
 
-    public PremiumsSummary getPremiumsSummaryIncurred() {
-        return premiumsSummaryIncurred;
+    public PremiumsSummary getPremiumsSummaryShared() {
+        return premiumsSummaryShared;
     }
 
     public ClaimsSummary getClaimsSummary() {

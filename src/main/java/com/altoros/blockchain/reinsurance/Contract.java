@@ -46,98 +46,105 @@ public class Contract {
         return new ClaimsSummary(totalPaid, totalIncurred, claims);
     }
 
-    // TODO apply share
     public ContractSummary processPremiums(ClaimsSummary claimsSummary, LocalDate evaluationDate) {
-        PremiumsSummary premiumsSummaryPaid = calculatePremiums(claimsSummary.getPaid(),
+        Premiums premiumsPaid = calculatePremiums(claimsSummary.getPaid(),
                 date -> evaluationDate.compareTo(date) >= 0);
-        PremiumsSummary premiumsSummaryIncurred = calculatePremiums(claimsSummary.getIncurred(),
+        Premiums premiumsIncurred = calculatePremiums(claimsSummary.getIncurred(),
                 date -> true);
-        return new ContractSummary(premiumsSummaryPaid, premiumsSummaryIncurred, claimsSummary, evaluationDate);
+        PremiumsSummary premiumsSummaryFull = new PremiumsSummary(premiumsPaid, premiumsIncurred);
+        PremiumsSummary premiumsSummaryShared = new PremiumsSummary(applyShare(premiumsPaid), applyShare(premiumsIncurred));
+        return new ContractSummary(premiumsSummaryFull, premiumsSummaryShared, claimsSummary, evaluationDate);
     }
 
-    public CumulativePositionsSummary processCumulativePositions(ContractSummary contractSummary) {
-        PremiumsSummary premiumsSummaryIncurred = contractSummary.getPremiumsSummaryIncurred();
-
-        BigDecimal totalClaimsIncurred = premiumsSummaryIncurred.getTotalClaims();
-        CumulativePosition loss = calculateCumulativePosition(totalClaimsIncurred);
-
-        BigDecimal written = premiumsSummaryIncurred.getReinstatementPremium()
-                .add(premiumsSummaryIncurred.getAdditionalPremium())
-                .add(premiumsSummaryIncurred.getDepositPremium())
-                .add(premiumsSummaryIncurred.getAdjustmentPremium())
-                .subtract(premiumsSummaryIncurred.getProfitCommission())
-                .subtract(premiumsSummaryIncurred.getNoClaimsBonus());
-        CumulativePosition profitWritten = calculateCumulativePosition(written);
-
+    public LossesAndProfitsSummary processCumulativePositions(ContractSummary contractSummary) {
         LocalDate evaluationDate = contractSummary.getEvaluationDate();
 
-        BigDecimal lossOccurringDuringPrecise = subtract(min(max(evaluationDate, this.inceptionDate), this.expiryDate), this.inceptionDate)
-                .divide(subtract(this.expiryDate, this.inceptionDate), 10, BigDecimal.ROUND_HALF_EVEN);
-
-        BigDecimal lossOccurringDuring = lossOccurringDuringPrecise.setScale(3, BigDecimal.ROUND_HALF_EVEN);
+        BigDecimal lossOccurringDuringPrecise = DateUtils.subtract(
+                DateUtils.min(DateUtils.max(evaluationDate, this.inceptionDate), this.expiryDate), this.inceptionDate)
+                .divide(DateUtils.subtract(this.expiryDate, this.inceptionDate), 10, BigDecimal.ROUND_HALF_DOWN);
 
         BigDecimal val = BigDecimal.ZERO;
         if (evaluationDate.compareTo(this.expiryDate) >= 0) {
-            val = subtract(this.expiryDate.plusDays(365), min(evaluationDate, this.expiryDate.plusDays(365)))
-                    .divide(subtract(this.expiryDate, this.inceptionDate), 10, BigDecimal.ROUND_HALF_EVEN)
+            val = DateUtils.subtract(this.expiryDate.plusDays(365), DateUtils.min(evaluationDate, this.expiryDate.plusDays(365)))
+                    .divide(DateUtils.subtract(this.expiryDate, this.inceptionDate), 10, BigDecimal.ROUND_HALF_DOWN)
                     .pow(2)
-                    .divide(new BigDecimal(2), 10, BigDecimal.ROUND_HALF_EVEN);
+                    .divide(new BigDecimal(2), 10, BigDecimal.ROUND_HALF_DOWN);
         }
 
         BigDecimal riskAttachingPrecise = lossOccurringDuringPrecise
                 .pow(2)
-                .divide(new BigDecimal(2), 10, BigDecimal.ROUND_HALF_EVEN)
+                .divide(new BigDecimal(2), 10, BigDecimal.ROUND_HALF_DOWN)
                 .add(val);
-        BigDecimal riskAttaching = riskAttachingPrecise.setScale(3, BigDecimal.ROUND_HALF_EVEN);
 
-        BigDecimal tmp;
-        if (this.basis.equals("RA")) {
-            tmp = riskAttachingPrecise;
-        } else {
-            tmp = lossOccurringDuringPrecise;
+        BigDecimal basisValue;
+        // TODO what is better : exception or using LOD for CM
+        switch (this.basis) {
+            case "RA":
+                basisValue = riskAttachingPrecise;
+                break;
+            case "LOD":
+                basisValue = lossOccurringDuringPrecise;
+                break;
+            default:
+                throw new RuntimeException("Unknown basis for losses and profits calculation=" + this.basis);
         }
 
-        BigDecimal earned = premiumsSummaryIncurred.getReinstatementPremium()
-                .add(premiumsSummaryIncurred.getAdditionalPremium())
-                .add(premiumsSummaryIncurred.getDepositPremium()
-                        .add(premiumsSummaryIncurred.getAdjustmentPremium())
-                        .subtract(premiumsSummaryIncurred.getProfitCommission())
-                        .subtract(premiumsSummaryIncurred.getNoClaimsBonus())
-                        .multiply(tmp))
-                .setScale(0, BigDecimal.ROUND_HALF_EVEN);
+        CumulativePositionsSummary cumulativePositionsSummaryFull = calculateCumulativePositionsSummary(
+                contractSummary.getPremiumsSummaryFull().getPremiumsIncurred(), basisValue);
+        CumulativePositionsSummary cumulativePositionsSummaryShared = calculateCumulativePositionsSummary(
+                contractSummary.getPremiumsSummaryShared().getPremiumsIncurred(), basisValue);
+
+        BigDecimal lossOccurringDuring = lossOccurringDuringPrecise.setScale(3, BigDecimal.ROUND_HALF_DOWN);
+        BigDecimal riskAttaching = riskAttachingPrecise.setScale(3, BigDecimal.ROUND_HALF_DOWN);
+
+        return new LossesAndProfitsSummary(cumulativePositionsSummaryFull, cumulativePositionsSummaryShared, lossOccurringDuring, riskAttaching);
+    }
+
+    CumulativePositionsSummary calculateCumulativePositionsSummary(Premiums premiumsIncurred, BigDecimal basisValue) {
+
+        BigDecimal totalClaimsIncurred = premiumsIncurred.getTotalClaims();
+        CumulativePosition loss = calculateCumulativePosition(totalClaimsIncurred);
+
+        BigDecimal written = premiumsIncurred.getReinstatementPremium()
+                .add(premiumsIncurred.getAdditionalPremium())
+                .add(premiumsIncurred.getDepositPremium())
+                .add(premiumsIncurred.getAdjustmentPremium())
+                .subtract(premiumsIncurred.getProfitCommission())
+                .subtract(premiumsIncurred.getNoClaimsBonus());
+        CumulativePosition profitWritten = calculateCumulativePosition(written);
+
+        BigDecimal earned = premiumsIncurred.getReinstatementPremium()
+                .add(premiumsIncurred.getAdditionalPremium())
+                .add(premiumsIncurred.getDepositPremium()
+                        .add(premiumsIncurred.getAdjustmentPremium())
+                        .subtract(premiumsIncurred.getProfitCommission())
+                        .subtract(premiumsIncurred.getNoClaimsBonus())
+                        .multiply(basisValue))
+                .setScale(0, BigDecimal.ROUND_HALF_DOWN);
         CumulativePosition profitEarned = calculateCumulativePosition(earned);
 
-        return new CumulativePositionsSummary(loss, profitWritten, profitEarned, lossOccurringDuring, riskAttaching);
-    }
-
-    BigDecimal subtract(LocalDate d1, LocalDate d2) {
-        return new BigDecimal(d1.toEpochDay() - d2.toEpochDay());
-    }
-
-    LocalDate max(LocalDate... dates) {
-        LocalDate max = LocalDate.MIN;
-        for (LocalDate date : dates) {
-            if (date.compareTo(max) > 0) {
-                max = date;
-            }
-        }
-        return max;
-    }
-
-    LocalDate min(LocalDate... dates) {
-        LocalDate min = LocalDate.MAX;
-        for (LocalDate date : dates) {
-            if (date.compareTo(min) < 0) {
-                min = date;
-            }
-        }
-        return min;
+        return new CumulativePositionsSummary(loss, profitWritten, profitEarned);
     }
 
     CumulativePosition calculateCumulativePosition(BigDecimal amount) {
         GrossCededNet cedant = new GrossCededNet(BigDecimal.ZERO, amount.negate(), amount.negate());
         GrossCededNet reinsurer = new GrossCededNet(amount, BigDecimal.ZERO, amount);
         return new CumulativePosition(cedant, reinsurer);
+    }
+
+    Premiums applyShare(Premiums premiums) {
+        return new Premiums(
+                applyShare(premiums.getTotalClaims()),
+                applyShare(premiums.getReinstatementPremium()),
+                applyShare(premiums.getAdditionalPremium()),
+                applyShare(premiums.getDepositPremium()),
+                applyShare(premiums.getAdjustmentPremium()),
+                applyShare(premiums.getProfitCommission()),
+                applyShare(premiums.getNoClaimsBonus()));
+    }
+
+    BigDecimal applyShare(BigDecimal amount) {
+        return amount.multiply(share).setScale(0, BigDecimal.ROUND_HALF_DOWN);
     }
 
     BigDecimal calculateTotal(List<Claim> claims, Function<Claim, BigDecimal> function) {
@@ -155,7 +162,7 @@ public class Contract {
         return claimCalculations.stream()
                 .map(ClaimCalculation::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(0, BigDecimal.ROUND_HALF_EVEN);
+                .setScale(0, BigDecimal.ROUND_HALF_DOWN);
     }
 
     List<ClaimCalculation> convertCurrency(List<ClaimCalculation> ccs) {
@@ -260,8 +267,8 @@ public class Contract {
         }
     }
 
-    PremiumsSummary calculatePremiums(BigDecimal totalClaimsBeforePeriodLimits,
-                                      Predicate<LocalDate> evaluationDatePredicate) {
+    Premiums calculatePremiums(BigDecimal totalClaimsBeforePeriodLimits,
+                               Predicate<LocalDate> evaluationDatePredicate) {
         // total claims after period
         BigDecimal totalClaims = applyLimits(totalClaimsBeforePeriodLimits, "period");
 
@@ -278,7 +285,7 @@ public class Contract {
 
         BigDecimal noClaimsBonus = calculateNoClaimsBonus(totalClaims, depositPremium, additionalPremium);
 
-        return new PremiumsSummary(totalClaims, reinstatementPremium, additionalPremium, depositPremium,
+        return new Premiums(totalClaims, reinstatementPremium, additionalPremium, depositPremium,
                 adjustmentPremium, profitCommission, noClaimsBonus);
     }
 
@@ -293,15 +300,15 @@ public class Contract {
             return BigDecimal.ZERO;
         }
 
-        return reinstatementPremium.min(amount.divide(limit, 10, BigDecimal.ROUND_HALF_EVEN))
+        return reinstatementPremium.min(amount.divide(limit, 10, BigDecimal.ROUND_HALF_DOWN))
                 .multiply(reinstatementPremiumPercentage)
                 .multiply(deposit)
                 // round to the closest integer
-                .setScale(0, BigDecimal.ROUND_HALF_EVEN);
+                .setScale(0, BigDecimal.ROUND_HALF_DOWN);
     }
 
     BigDecimal calculateAdditionalPremium(BigDecimal amount) {
-        return amount.multiply(this.additionalPremium);
+        return amount.multiply(this.additionalPremium).setScale(0, BigDecimal.ROUND_HALF_DOWN);
     }
 
     BigDecimal calculateDepositPremium(Predicate<LocalDate> predicate) {
@@ -313,7 +320,9 @@ public class Contract {
 
     BigDecimal calculateAdjustmentPremium(Predicate<LocalDate> predicate) {
         if (predicate.test(this.subjectPremiumFinalAdjustedDate)) {
-            return minimum.max(adjustableRate.multiply(subjectPremiumFinal)).subtract(deposit);
+            return minimum.max(adjustableRate.multiply(subjectPremiumFinal))
+                    .subtract(deposit)
+                    .setScale(0, BigDecimal.ROUND_HALF_DOWN);
         }
         return BigDecimal.ZERO;
     }
@@ -326,13 +335,14 @@ public class Contract {
                         .add(additionalPremium)
                         .add(depositPremium)
                         .add(adjustmentPremium)
-                        .subtract(totalClaims)));
+                        .subtract(totalClaims)))
+                .setScale(0, BigDecimal.ROUND_HALF_DOWN);
     }
 
     BigDecimal calculateNoClaimsBonus(BigDecimal totalClaims, BigDecimal depositPremium, BigDecimal additionalPremium) {
         BigDecimal noClaimsBonus = BigDecimal.ZERO;
         if (totalClaims.compareTo(BigDecimal.ZERO) == 0) {
-            noClaimsBonus = noClaimsBonus.multiply(depositPremium.add(additionalPremium));
+            noClaimsBonus = noClaimsBonus.multiply(depositPremium.add(additionalPremium)).setScale(0, BigDecimal.ROUND_HALF_DOWN);
         }
         return noClaimsBonus;
     }
