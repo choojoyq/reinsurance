@@ -18,11 +18,10 @@ public class CurrencyConversion {
 
         Map<String, BigDecimal> cadTo = new HashMap<>();
         cadTo.put("USD", BigDecimal.valueOf(0.8));
-        cadTo.put("CAD", BigDecimal.valueOf(1));
 
         Map<String, BigDecimal> usdTo = new HashMap<>();
-        usdTo.put("USD", BigDecimal.valueOf(1));
-        usdTo.put("CAD", BigDecimal.valueOf(1.25));
+        usdTo.put("USD", BigDecimal.ONE);
+        usdTo.put("EUR", BigDecimal.valueOf(0.9090909090));
 
         this.currencyConversionRates.put("CAD", cadTo);
         this.currencyConversionRates.put("USD", usdTo);

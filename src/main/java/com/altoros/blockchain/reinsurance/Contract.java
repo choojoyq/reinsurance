@@ -46,12 +46,98 @@ public class Contract {
         return new ClaimsSummary(totalPaid, totalIncurred, claims);
     }
 
+    // TODO apply share
     public ContractSummary processPremiums(ClaimsSummary claimsSummary, LocalDate evaluationDate) {
         PremiumsSummary premiumsSummaryPaid = calculatePremiums(claimsSummary.getPaid(),
                 date -> evaluationDate.compareTo(date) >= 0);
         PremiumsSummary premiumsSummaryIncurred = calculatePremiums(claimsSummary.getIncurred(),
                 date -> true);
         return new ContractSummary(premiumsSummaryPaid, premiumsSummaryIncurred, claimsSummary, evaluationDate);
+    }
+
+    public CumulativePositionsSummary processCumulativePositions(ContractSummary contractSummary) {
+        PremiumsSummary premiumsSummaryIncurred = contractSummary.getPremiumsSummaryIncurred();
+
+        BigDecimal totalClaimsIncurred = premiumsSummaryIncurred.getTotalClaims();
+        CumulativePosition loss = calculateCumulativePosition(totalClaimsIncurred);
+
+        BigDecimal written = premiumsSummaryIncurred.getReinstatementPremium()
+                .add(premiumsSummaryIncurred.getAdditionalPremium())
+                .add(premiumsSummaryIncurred.getDepositPremium())
+                .add(premiumsSummaryIncurred.getAdjustmentPremium())
+                .subtract(premiumsSummaryIncurred.getProfitCommission())
+                .subtract(premiumsSummaryIncurred.getNoClaimsBonus());
+        CumulativePosition profitWritten = calculateCumulativePosition(written);
+
+        LocalDate evaluationDate = contractSummary.getEvaluationDate();
+
+        BigDecimal lossOccurringDuringPrecise = subtract(min(max(evaluationDate, this.inceptionDate), this.expiryDate), this.inceptionDate)
+                .divide(subtract(this.expiryDate, this.inceptionDate), 10, BigDecimal.ROUND_HALF_EVEN);
+
+        BigDecimal lossOccurringDuring = lossOccurringDuringPrecise.setScale(3, BigDecimal.ROUND_HALF_EVEN);
+
+        BigDecimal val = BigDecimal.ZERO;
+        if (evaluationDate.compareTo(this.expiryDate) >= 0) {
+            val = subtract(this.expiryDate.plusDays(365), min(evaluationDate, this.expiryDate.plusDays(365)))
+                    .divide(subtract(this.expiryDate, this.inceptionDate), 10, BigDecimal.ROUND_HALF_EVEN)
+                    .pow(2)
+                    .divide(new BigDecimal(2), 10, BigDecimal.ROUND_HALF_EVEN);
+        }
+
+        BigDecimal riskAttachingPrecise = lossOccurringDuringPrecise
+                .pow(2)
+                .divide(new BigDecimal(2), 10, BigDecimal.ROUND_HALF_EVEN)
+                .add(val);
+        BigDecimal riskAttaching = riskAttachingPrecise.setScale(3, BigDecimal.ROUND_HALF_EVEN);
+
+        BigDecimal tmp;
+        if (this.basis.equals("RA")) {
+            tmp = riskAttachingPrecise;
+        } else {
+            tmp = lossOccurringDuringPrecise;
+        }
+
+        BigDecimal earned = premiumsSummaryIncurred.getReinstatementPremium()
+                .add(premiumsSummaryIncurred.getAdditionalPremium())
+                .add(premiumsSummaryIncurred.getDepositPremium()
+                        .add(premiumsSummaryIncurred.getAdjustmentPremium())
+                        .subtract(premiumsSummaryIncurred.getProfitCommission())
+                        .subtract(premiumsSummaryIncurred.getNoClaimsBonus())
+                        .multiply(tmp))
+                .setScale(0, BigDecimal.ROUND_HALF_EVEN);
+        CumulativePosition profitEarned = calculateCumulativePosition(earned);
+
+        return new CumulativePositionsSummary(loss, profitWritten, profitEarned, lossOccurringDuring, riskAttaching);
+    }
+
+    BigDecimal subtract(LocalDate d1, LocalDate d2) {
+        return new BigDecimal(d1.toEpochDay() - d2.toEpochDay());
+    }
+
+    LocalDate max(LocalDate... dates) {
+        LocalDate max = LocalDate.MIN;
+        for (LocalDate date : dates) {
+            if (date.compareTo(max) > 0) {
+                max = date;
+            }
+        }
+        return max;
+    }
+
+    LocalDate min(LocalDate... dates) {
+        LocalDate min = LocalDate.MAX;
+        for (LocalDate date : dates) {
+            if (date.compareTo(min) < 0) {
+                min = date;
+            }
+        }
+        return min;
+    }
+
+    CumulativePosition calculateCumulativePosition(BigDecimal amount) {
+        GrossCededNet cedant = new GrossCededNet(BigDecimal.ZERO, amount.negate(), amount.negate());
+        GrossCededNet reinsurer = new GrossCededNet(amount, BigDecimal.ZERO, amount);
+        return new CumulativePosition(cedant, reinsurer);
     }
 
     BigDecimal calculateTotal(List<Claim> claims, Function<Claim, BigDecimal> function) {
@@ -68,7 +154,8 @@ public class Contract {
         // before period limit
         return claimCalculations.stream()
                 .map(ClaimCalculation::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(0, BigDecimal.ROUND_HALF_EVEN);
     }
 
     List<ClaimCalculation> convertCurrency(List<ClaimCalculation> ccs) {
@@ -200,8 +287,10 @@ public class Contract {
         // not unlimited
         if (riskFinancial.getLimit().compareTo(new BigDecimal(Long.MAX_VALUE)) < 0) {
             limit = riskFinancial.getLimit();
-        } else {
+        } else if (eventFinancial.getLimit().compareTo(new BigDecimal(Long.MAX_VALUE)) < 0) {
             limit = eventFinancial.getLimit();
+        } else {
+            return BigDecimal.ZERO;
         }
 
         return reinstatementPremium.min(amount.divide(limit, 10, BigDecimal.ROUND_HALF_EVEN))

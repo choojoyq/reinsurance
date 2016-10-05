@@ -16,7 +16,7 @@ import java.util.List;
  * @author Nikita Gorbachevski
  */
 @RunWith(MockitoJUnitRunner.class)
-public class ContractTest {
+public class ReinsuranceContractTest {
 
     private Contract contractEnergyOnshore;
     private Contract contractAviation;
@@ -81,7 +81,6 @@ public class ContractTest {
                 new PaymentSchedule(LocalDate.of(2015, 1, 1), new BigDecimal(7_687_500)),
                 new PaymentSchedule(LocalDate.of(2015, 6, 1), new BigDecimal(7_687_500))));
         contractAviation.setStatus("APPROVED");
-
 
         Claim claim = new Claim();
         claim.setCedant("ACGS");
@@ -315,7 +314,7 @@ public class ContractTest {
     @Test
     public void testProcessPremiumsEnergyOnshore() {
         ClaimsSummary claimsSummary = new ClaimsSummary(
-                new BigDecimal(43_000_000), new BigDecimal(64_000_000), this.claims);
+                new BigDecimal(43_000_000), new BigDecimal(64_000_000), null);
         LocalDate evaluationDate = LocalDate.of(2015, 8, 30);
         ContractSummary contractSummary = this.contractEnergyOnshore.processPremiums(claimsSummary, evaluationDate);
 
@@ -342,5 +341,81 @@ public class ContractTest {
 
         Assert.assertEquals(claimsSummary, contractSummary.getClaimsSummary());
         Assert.assertEquals(evaluationDate, contractSummary.getEvaluationDate());
+    }
+
+    @Test
+    public void testProcessCumulativePositionsAviation() {
+        ContractSummary contractSummary = new ContractSummary(
+                new PremiumsSummary(new BigDecimal(115_000_000), new BigDecimal(25_932_500),
+                        BigDecimal.ZERO, new BigDecimal(15_375_000), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO),
+                new PremiumsSummary(new BigDecimal(145_000_000), new BigDecimal(32_697_500),
+                        BigDecimal.ZERO, new BigDecimal(15_375_000), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO),
+                null, LocalDate.of(2015, 8, 30));
+        CumulativePositionsSummary cumulativePositionsSummary = this.contractAviation.processCumulativePositions(contractSummary);
+
+        Assert.assertEquals(BigDecimal.ZERO, cumulativePositionsSummary.getLoss().getCedant().getGross());
+        Assert.assertEquals(new BigDecimal(-145_000_000), cumulativePositionsSummary.getLoss().getCedant().getCeded());
+        Assert.assertEquals(new BigDecimal(-145_000_000), cumulativePositionsSummary.getLoss().getCedant().getNet());
+
+        Assert.assertEquals(new BigDecimal(145_000_000), cumulativePositionsSummary.getLoss().getReinsurer().getGross());
+        Assert.assertEquals(BigDecimal.ZERO, cumulativePositionsSummary.getLoss().getReinsurer().getCeded());
+        Assert.assertEquals(new BigDecimal(145_000_000), cumulativePositionsSummary.getLoss().getReinsurer().getNet());
+
+        Assert.assertEquals(BigDecimal.ZERO, cumulativePositionsSummary.getPremiumWritten().getCedant().getGross());
+        Assert.assertEquals(new BigDecimal(-48_072_500), cumulativePositionsSummary.getPremiumWritten().getCedant().getCeded());
+        Assert.assertEquals(new BigDecimal(-48_072_500), cumulativePositionsSummary.getPremiumWritten().getCedant().getNet());
+
+        Assert.assertEquals(new BigDecimal(48_072_500), cumulativePositionsSummary.getPremiumWritten().getReinsurer().getGross());
+        Assert.assertEquals(BigDecimal.ZERO, cumulativePositionsSummary.getPremiumWritten().getReinsurer().getCeded());
+        Assert.assertEquals(new BigDecimal(48_072_500), cumulativePositionsSummary.getPremiumWritten().getReinsurer().getNet());
+
+        Assert.assertEquals(BigDecimal.ZERO, cumulativePositionsSummary.getPremiumEarned().getCedant().getGross());
+        Assert.assertEquals(new BigDecimal(-36_067_396), cumulativePositionsSummary.getPremiumEarned().getCedant().getCeded());
+        Assert.assertEquals(new BigDecimal(-36_067_396), cumulativePositionsSummary.getPremiumEarned().getCedant().getNet());
+
+        Assert.assertEquals(new BigDecimal(36_067_396), cumulativePositionsSummary.getPremiumEarned().getReinsurer().getGross());
+        Assert.assertEquals(BigDecimal.ZERO, cumulativePositionsSummary.getPremiumEarned().getReinsurer().getCeded());
+        Assert.assertEquals(new BigDecimal(36_067_396), cumulativePositionsSummary.getPremiumEarned().getReinsurer().getNet());
+
+        Assert.assertEquals(0, BigDecimal.valueOf(0.662).compareTo(cumulativePositionsSummary.getLossOccurringDuring()));
+        Assert.assertEquals(0, BigDecimal.valueOf(0.219).compareTo(cumulativePositionsSummary.getRisksAttaching()));
+    }
+
+    @Test
+    public void testProcessCumulativePositionsEnergyOnshore() {
+        ContractSummary contractSummary = new ContractSummary(
+                new PremiumsSummary(new BigDecimal(43_000_000), new BigDecimal(16_800_000),
+                        BigDecimal.ZERO, new BigDecimal(8_400_000), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO),
+                new PremiumsSummary(new BigDecimal(60_000_000), new BigDecimal(16_800_000),
+                        BigDecimal.ZERO, new BigDecimal(8_400_000), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO),
+                null, LocalDate.of(2015, 8, 30));
+        CumulativePositionsSummary cumulativePositionsSummary = this.contractEnergyOnshore.processCumulativePositions(contractSummary);
+
+        Assert.assertEquals(BigDecimal.ZERO, cumulativePositionsSummary.getLoss().getCedant().getGross());
+        Assert.assertEquals(new BigDecimal(-60_000_000), cumulativePositionsSummary.getLoss().getCedant().getCeded());
+        Assert.assertEquals(new BigDecimal(-60_000_000), cumulativePositionsSummary.getLoss().getCedant().getNet());
+
+        Assert.assertEquals(new BigDecimal(60_000_000), cumulativePositionsSummary.getLoss().getReinsurer().getGross());
+        Assert.assertEquals(BigDecimal.ZERO, cumulativePositionsSummary.getLoss().getReinsurer().getCeded());
+        Assert.assertEquals(new BigDecimal(60_000_000), cumulativePositionsSummary.getLoss().getReinsurer().getNet());
+
+        Assert.assertEquals(BigDecimal.ZERO, cumulativePositionsSummary.getPremiumWritten().getCedant().getGross());
+        Assert.assertEquals(new BigDecimal(-25_200_000), cumulativePositionsSummary.getPremiumWritten().getCedant().getCeded());
+        Assert.assertEquals(new BigDecimal(-25_200_000), cumulativePositionsSummary.getPremiumWritten().getCedant().getNet());
+
+        Assert.assertEquals(new BigDecimal(25_200_000), cumulativePositionsSummary.getPremiumWritten().getReinsurer().getGross());
+        Assert.assertEquals(BigDecimal.ZERO, cumulativePositionsSummary.getPremiumWritten().getReinsurer().getCeded());
+        Assert.assertEquals(new BigDecimal(25_200_000), cumulativePositionsSummary.getPremiumWritten().getReinsurer().getNet());
+
+        Assert.assertEquals(BigDecimal.ZERO, cumulativePositionsSummary.getPremiumEarned().getCedant().getGross());
+        Assert.assertEquals(new BigDecimal(-22_361_538), cumulativePositionsSummary.getPremiumEarned().getCedant().getCeded());
+        Assert.assertEquals(new BigDecimal(-22_361_538), cumulativePositionsSummary.getPremiumEarned().getCedant().getNet());
+
+        Assert.assertEquals(new BigDecimal(22_361_538), cumulativePositionsSummary.getPremiumEarned().getReinsurer().getGross());
+        Assert.assertEquals(BigDecimal.ZERO, cumulativePositionsSummary.getPremiumEarned().getReinsurer().getCeded());
+        Assert.assertEquals(new BigDecimal(22_361_538), cumulativePositionsSummary.getPremiumEarned().getReinsurer().getNet());
+
+        Assert.assertEquals(0, BigDecimal.valueOf(0.662).compareTo(cumulativePositionsSummary.getLossOccurringDuring()));
+        Assert.assertEquals(0, BigDecimal.valueOf(0.219).compareTo(cumulativePositionsSummary.getRisksAttaching()));
     }
 }
